@@ -1,0 +1,197 @@
+# Quotation API Documentation
+
+## API Paths and Data Structures
+
+### 1. POST / - Create Quote
+**Request Body:**
+```javascript
+{
+  customerId: "string?", // Optional customer ID
+  customer: {
+    name: "string", // Required
+    email: "string", // Required
+    phone: "string", // Required
+    company: "string?",
+    address: "string?",
+    shippingCity: "string?", // Maps to customerCity
+    shippingDistrict: "string?" // Maps to customerDistrict
+  },
+  items: [{ // Required, non-empty array
+    productId: "string?",
+    productName: "string",
+    size: "string?",
+    quantity: "number",
+    unitPrice: "number",
+    totalPrice: "number",
+    description: "string?"
+  }],
+  subtotal: "number?",
+  vatAmount: "number?",
+  total: "number?",
+  includeVat: "boolean?", // Default: false
+  vatRate: "number?", // Default: 0.18
+  validUntil: "number?", // Default: 30 (days)
+  notes: "string?",
+  terms: "string?",
+  status: "string?" // Default: 'Draft'
+}
+```
+
+### 2. GET / - Get Quotes (with filtering/pagination)
+**Query Parameters:**
+```javascript
+{
+  page: "number?", // Default: 1
+  limit: "number?", // Default: 10
+  status: "string?", // 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired'
+  search: "string?", // Searches quoteNumber, customerName, customerEmail, customerCompany
+  customerId: "string?",
+  startDate: "string?", // ISO date string
+  endDate: "string?", // ISO date string
+  sortBy: "string?", // Default: 'createdAt'
+  sortOrder: "string?" // 'asc' | 'desc', Default: 'desc'
+}
+```
+
+### 3. GET /stats - Get Quote Statistics
+**Query Parameters:**
+```javascript
+{
+  startDate: "string?", // ISO date string
+  endDate: "string?" // ISO date string
+}
+```
+
+### 4. GET /:id - Get Single Quote
+**Path Parameters:**
+- `id`: "string" (quote ID)
+
+### 5. PUT /:id - Update Quote
+**Path Parameters:**
+- `id`: "string" (quote ID)
+
+**Request Body:** (same as create, but all fields optional)
+```javascript
+{
+  // Same structure as POST /, but all fields optional
+  // Can include items array to replace all existing items
+}
+```
+
+### 6. PATCH /:id/status - Update Quote Status
+**Path Parameters:**
+- `id`: "string" (quote ID)
+
+**Request Body:**
+```javascript
+{
+  status: "string" // Required: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired'
+}
+```
+
+### 7. POST /:id/duplicate - Duplicate Quote
+**Path Parameters:**
+- `id`: "string" (quote ID)
+
+**Request Body:** Empty
+
+### 8. DELETE /:id - Delete Single Quote
+**Path Parameters:**
+- `id`: "string" (quote ID)
+
+**Restrictions:** Only 'Draft' or 'Expired' status quotes can be deleted
+
+### 9. DELETE / - Delete Multiple Quotes
+**Request Body:**
+```javascript
+{
+  ids: ["string"] // Array of quote IDs
+}
+```
+
+## Response Data Structures
+
+All responses follow this format:
+```javascript
+{
+  status: {
+    returnCode: number, // HTTP status code
+    returnMessage: string
+  },
+  data: object? // Present when successful
+}
+```
+
+### Success Response Examples:
+
+**Quote Object Structure:**
+```javascript
+{
+  id: "string",
+  quoteNumber: "string", // Format: QUO/YYMMDD/001
+  customerId: "string?",
+  customerName: "string",
+  customerEmail: "string",
+  customerPhone: "string",
+  customerCompany: "string?",
+  customerAddress: "string?",
+  customerCity: "string?",
+  customerDistrict: "string?",
+  status: "string", // 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired'
+  includeVat: boolean,
+  vatRate: number,
+  subtotal: number,
+  vatAmount: number,
+  total: number,
+  validUntil: number,
+  notes: "string?",
+  terms: "string?",
+  createdAt: "Date",
+  updatedAt: "Date",
+  items: [{
+    id: "string",
+    quoteId: "string",
+    productId: "string?",
+    productName: "string",
+    size: "string?",
+    quantity: number,
+    unitPrice: number,
+    totalPrice: number,
+    description: "string?"
+  }],
+  customer: { // Full customer object if exists
+    // Customer fields...
+  }
+}
+```
+
+**Stats Response:**
+```javascript
+{
+  totalQuotes: number,
+  byStatus: {
+    draft: number,
+    sent: number,
+    accepted: number,
+    rejected: number,
+    expired: number
+  },
+  totalValue: number,
+  conversionRate: string // Percentage as string (e.g., "15.50")
+}
+```
+
+**Paginated Quotes Response:**
+```javascript
+{
+  quotes: [Quote[]],
+  pagination: {
+    currentPage: number,
+    totalPages: number,
+    totalCount: number,
+    limit: number,
+    hasNextPage: boolean,
+    hasPrevPage: boolean
+  }
+}
+```

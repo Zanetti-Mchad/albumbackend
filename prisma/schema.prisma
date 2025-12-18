@@ -1,0 +1,238 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Customer types for discriminating client vs company
+enum CustomerType {
+  client
+  company
+}
+
+// System enums
+enum ActionType {
+  LOGIN
+  LOGOUT
+  PASSWORD_RESET
+  PROFILE_UPDATE
+  PERMISSION_CHANGE
+  ACCOUNT_CREATE
+  DATA_ACCESS
+  DATA_MODIFY
+}
+
+enum LogStatus {
+  SUCCESS
+  FAILURE
+  WARNING
+  INFO
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  permissions Json?    // Array of permission strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model User {
+  id              String            @id @default(cuid())
+  firstName       String            @db.VarChar(100)
+  lastName        String?           @db.VarChar(100)
+  email           String            @unique @db.VarChar(255)
+  phone           String?           @unique @db.VarChar(20)
+  role            String            @default("user") @db.VarChar(50)
+  photo           String?           @db.Text
+  password        String            @db.VarChar(255)
+  isActive        Boolean           @default(true)
+  lastLogin       DateTime?
+  resetToken      String?           @db.VarChar(255)
+  resetTokenExpiry DateTime?
+  logs            Log[]
+  albums          Album[]           @relation("UserAlbums")
+  updatedFamilySettings FamilySettings[] @relation("FamilySettingsUpdatedBy")
+  passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  albumLikes      AlbumLike[]
+  albumComments   AlbumComment[]
+  mediaLikes      MediaLike[]
+  mediaComments   MediaComment[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?         @map("deleted_at")
+
+  // --- Add these fields for family member details ---
+  relationship    String?           @db.VarChar(100)
+  birthOrder      String?           @db.VarChar(100)
+  dateOfBirth     DateTime?
+  // --------------------------------------------------
+
+  @@index([role])
+  @@index([email])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Log {
+  id          String     @id @default(cuid())
+  action      ActionType
+  status      LogStatus
+  description String?    @db.Text
+  ipAddress   String?    @db.VarChar(45)  // Supports both IPv4 and IPv6
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id])
+  createdAt   DateTime   @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([status])
+  @@index([createdAt])
+  @@map("logs")
+}
+model FamilySettings {
+  id              String   @id @default(cuid())
+  familyName      String?  @db.VarChar(255)
+  familyBio       String?  @db.Text
+  familyPhoto     String   @default("/default-family.jpg") @db.Text
+  updatedById     String?
+  updatedBy       User?    @relation("FamilySettingsUpdatedBy", fields: [updatedById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([updatedById])
+  @@map("family_settings")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @db.VarChar(6)  // 6-digit OTP
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @db.VarChar(6)  // 6-digit OTP
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
+model Album {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  isPublic    Boolean   @default(true)
+  cover       String?
+  userId      String
+  user        User      @relation("UserAlbums", fields: [userId], references: [id])
+  media       Media[]   @relation("AlbumMedia")
+  likes       AlbumLike[]
+  comments    AlbumComment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("albums")
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  type      String   // 'image' or 'video'
+  thumbnail String?
+  size      Int
+  mimeType  String
+  albumId   String
+  album     Album    @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: Cascade)
+  likes     MediaLike[]
+  comments  MediaComment[]
+  createdAt DateTime @default(now())
+
+  @@index([albumId])
+  @@index([type])
+  @@map("media")
+}
+
+// Reactions: Likes on Albums
+model AlbumLike {
+  id        String   @id @default(cuid())
+  userId    String
+  albumId   String
+  createdAt DateTime @default(now())
+
+  user   User  @relation(fields: [userId], references: [id])
+  album  Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, albumId])
+  @@index([albumId])
+  @@index([userId])
+  @@map("album_likes")
+}
+
+// Comments on Albums
+model AlbumComment {
+  id        String   @id @default(cuid())
+  userId    String
+  albumId   String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user   User  @relation(fields: [userId], references: [id])
+  album  Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([albumId])
+  @@index([userId])
+  @@map("album_comments")
+}
+
+// Reactions: Likes on individual Media
+model MediaLike {
+  id        String   @id @default(cuid())
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mediaId])
+  @@index([mediaId])
+  @@index([userId])
+  @@map("media_likes")
+}
+
+// Comments on individual Media
+model MediaComment {
+  id        String   @id @default(cuid())
+  userId    String
+  mediaId   String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
+  @@index([userId])
+  @@map("media_comments")
+}

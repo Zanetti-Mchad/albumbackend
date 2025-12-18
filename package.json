@@ -1,0 +1,60 @@
+{
+	"name": "@axoblade/qualiworth-hike-api",
+	"version": "1.0.0",
+	"description": "Qualiworth Hike API Service",
+	"main": "server.js",
+	"scripts": {
+		"test": "jest",
+		"dev": "nodemon src/server.js",
+		"start": "node src/server.js",
+		"resetdb": "node reset_db.js",
+		"reset:students": "node resetStudents.js",
+		"reset:user": "node resetuser.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/axoblade/qualiworth-hike-api.git"
+	},
+	"keywords": [
+		"Auth",
+		"JWT",
+		"2FA"
+	],
+	"author": "axoblade",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/axoblade/qualiworth-hike-api/issues"
+	},
+	"homepage": "https://github.com/axoblade/qualiworth-hike-api#readme",
+	"dependencies": {
+		"@prisma/client": "^6.18.0",
+		"@supabase/supabase-js": "^2.54.0",
+		"@types/axios": "^0.9.36",
+		"@types/formidable": "^3.4.5",
+		"africastalking": "^0.7.3",
+		"axios": "^1.13.0",
+		"bcrypt": "^5.1.1",
+		"bcryptjs": "^3.0.2",
+		"express": "^4.21.2",
+		"express-validator": "^7.2.0",
+		"formidable": "^3.5.4",
+		"jsonwebtoken": "^9.0.2",
+		"morgan": "^1.10.0",
+		"mysql2": "^3.12.0",
+		"next": "^15.4.6",
+		"nodemailer": "^6.10.1",
+		"react-hot-toast": "^2.5.2",
+		"twilio": "^5.7.0",
+		"xlsx": "^0.18.5"
+	},
+	"devDependencies": {
+		"@types/node": "^24.2.0",
+		"@types/react": "^19.1.9",
+		"@types/react-dom": "^19.1.7",
+		"dotenv": "^16.6.1",
+		"jest": "^29.7.0",
+		"nodemon": "^3.1.10",
+		"prisma": "^6.16.0",
+		"supertest": "^7.0.0"
+	}
+}
