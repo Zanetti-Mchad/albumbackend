@@ -6,7 +6,7 @@
 ✅ **100% success rate**
 ✅ **Proper response formatting**
 ✅ **Authentication enforced**
-✅ **Database schema verified**
+✅ **Database schema verified** (includes optional `name` field on tree)
 ✅ **Ready for production**
 
 ---
@@ -22,6 +22,7 @@
 **Request Example:**
 ```json
 {
+  "name": "Mahad's Nyanzi Family Tree",
   "rootId": "F1",
   "memberCount": 3,
   "members": [
@@ -74,6 +75,7 @@
   },
   "data": {
     "treeId": "cuid-tree-id",
+    "name": "Mahad's Nyanzi Family Tree",
     "rootId": "F1",
     "memberCount": 3,
     "members": [
@@ -99,6 +101,7 @@
 
 **Verified Features:**
 - ✅ Endpoint exists and responds
+- ✅ Tree `name` saved and returned (optional)
 - ✅ Proper status code (200)
 - ✅ Correct response structure
 - ✅ Authentication required
@@ -127,6 +130,7 @@ Content-Type: application/json
   },
   "data": {
     "treeId": "cuid-tree-id",
+    "name": "Mahad's Nyanzi Family Tree",
     "rootId": "F1",
     "memberCount": 3,
     "members": [
@@ -140,7 +144,7 @@ Content-Type: application/json
 
 **Verified Features:**
 - ✅ GET method working
-- ✅ Returns complete tree data
+- ✅ Returns complete tree data including `name`
 - ✅ Includes all members with relationships
 - ✅ Proper timestamps
 
@@ -167,6 +171,7 @@ Content-Type: application/json
     "returnMessage": "Statistics retrieved successfully"
   },
   "data": {
+    "name": "Mahad's Nyanzi Family Tree",
     "totalMembers": 3,
     "maleCount": 2,
     "femaleCount": 1,
@@ -181,6 +186,7 @@ Content-Type: application/json
 
 **Verified Features:**
 - ✅ Statistics calculation working
+- ✅ Tree `name` included in stats
 - ✅ Gender distribution tracked
 - ✅ Birth/death date counts
 - ✅ Root ID included
@@ -465,6 +471,7 @@ Content-Type: application/json
 ```json
 POST /api/v1/family-tree
 {
+  "name": "Mahad's Nyanzi Family Tree",
   "rootId": "F1",
   "memberCount": 3,
   "members": [
@@ -493,6 +500,7 @@ POST /api/v1/family-tree
   },
   "data": {
     "treeId": "cuid-tree-id",
+    "name": "Mahad's Nyanzi Family Tree",
     "rootId": "F1",
     "memberCount": 1,
     "members": [
@@ -513,6 +521,19 @@ POST /api/v1/family-tree
       }
     ]
   }
+}
+```
+
+### Tree Object Structure
+```javascript
+{
+  // Optional tree title
+  name: string | null,             // e.g. "Mahad's Nyanzi Family Tree"
+
+  // Required for submit
+  rootId: string,                  // External ID of root member
+  memberCount: number,             // Must match members.length
+  members: Member[]                // Array of family members
 }
 ```
 
@@ -547,6 +568,7 @@ POST /api/v1/family-tree
 CREATE TABLE family_trees (
   id CUID PRIMARY KEY,
   userId VARCHAR(36) NOT NULL UNIQUE,  -- One tree per user
+  name VARCHAR(255),                   -- Tree title (optional)
   rootId VARCHAR(255),                 -- External ID of root
   createdAt TIMESTAMP,
   updatedAt TIMESTAMP,
@@ -582,12 +604,12 @@ CREATE TABLE family_tree_members (
 ```
 ✅ POST   /api/v1/family-tree
    └─ Create or update entire tree
-   └─ Request: { rootId, memberCount, members[] }
+   └─ Request: { name?, rootId, memberCount, members[] }
    └─ Response: 201 Created
 
 ✅ GET    /api/v1/family-tree
    └─ Retrieve complete tree
-   └─ Response: { treeId, rootId, memberCount, members[] }
+   └─ Response: { treeId, name, rootId, memberCount, members[] }
 
 ✅ DELETE /api/v1/family-tree
    └─ Delete entire tree
@@ -595,7 +617,7 @@ CREATE TABLE family_tree_members (
 
 ✅ GET    /api/v1/family-tree/stats
    └─ Get tree statistics
-   └─ Response: { totalMembers, maleCount, femaleCount, ... }
+   └─ Response: { name, totalMembers, maleCount, femaleCount, ... }
 ```
 
 ### Member Operations
