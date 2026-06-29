@@ -16,7 +16,7 @@ const formatResponse = (statusCode, message, data = null) => ({
 const submitFamilyTree = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { rootId, memberCount, members } = req.body;
+    const { name, rootId, memberCount, members } = req.body;
 
     if (!userId) {
       return res.status(401).json(formatResponse(401, 'Unauthorized: User not found'));
@@ -39,6 +39,7 @@ const submitFamilyTree = async (req, res) => {
       familyTree = await prisma.familyTree.create({
         data: {
           userId,
+          name: name?.trim() || null,
           rootId,
         },
       });
@@ -51,7 +52,10 @@ const submitFamilyTree = async (req, res) => {
       // Update tree
       familyTree = await prisma.familyTree.update({
         where: { id: familyTree.id },
-        data: { rootId },
+        data: {
+          ...(name !== undefined && { name: name?.trim() || null }),
+          rootId,
+        },
       });
     }
 
@@ -79,6 +83,7 @@ const submitFamilyTree = async (req, res) => {
     return res.status(201).json(
       formatResponse(201, 'Family tree saved successfully!', {
         treeId: familyTree.id,
+        name: familyTree.name,
         rootId: familyTree.rootId,
         memberCount: createdMembers.length,
         members: createdMembers.map(formatMemberForResponse),
@@ -120,6 +125,7 @@ const getFamilyTree = async (req, res) => {
     return res.status(200).json(
       formatResponse(200, 'Family tree retrieved successfully', {
         treeId: familyTree.id,
+        name: familyTree.name,
         rootId: familyTree.rootId,
         memberCount: familyTree.members.length,
         members: familyTree.members.map(formatMemberForResponse),
@@ -324,6 +330,7 @@ const getFamilyTreeStats = async (req, res) => {
     }
 
     const stats = {
+      name: familyTree.name,
       totalMembers: familyTree.members.length,
       maleCount: familyTree.members.filter(m => m.gender === 'male').length,
       femaleCount: familyTree.members.filter(m => m.gender === 'female').length,

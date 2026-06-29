@@ -246,6 +246,7 @@ model FamilyTree {
   userId      String
   user        User     @relation("UserFamilyTrees", fields: [userId], references: [id], onDelete: Cascade)
   
+  name        String?  @db.VarChar(255)
   rootId      String?  @db.VarChar(255)
   members     FamilyTreeMember[]
   
