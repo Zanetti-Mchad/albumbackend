@@ -9,6 +9,7 @@ const logsRoutes = require('./routes/logsRoutes');
 const logoutRoutes = require('./routes/logoutRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const albumRoutes = require('./routes/albumRoutes');
+const familytreeRoutes = require('./routes/familytreeRoutes');
 const responseFormatter = require("./middlewares/responseFormatter");
 
 
@@ -42,6 +43,7 @@ app.use("/api/v1/integration", intergrationRoutes);
 app.use('/api/v1/logs', logsRoutes);
 app.use('/api/v1/logout', logoutRoutes);
 app.use('/api/v1/albums', albumRoutes);
+app.use('/api/v1/family-tree', familytreeRoutes);
 if (require.main === module) {
 	const PORT = process.env.PORT || 4210;
 	app.listen(PORT, () => {

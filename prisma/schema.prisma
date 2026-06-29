@@ -62,6 +62,7 @@ model User {
   albumComments   AlbumComment[]
   mediaLikes      MediaLike[]
   mediaComments   MediaComment[]
+  familyTrees     FamilyTree[]      @relation("UserFamilyTrees")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?         @map("deleted_at")
@@ -236,3 +237,55 @@ model MediaComment {
   @@index([userId])
   @@map("media_comments")
 }
+
+// ==================== FAMILY TREE MODELS ====================
+
+// Main family tree data structure
+model FamilyTree {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserFamilyTrees", fields: [userId], references: [id], onDelete: Cascade)
+  
+  rootId      String?  @db.VarChar(255)
+  members     FamilyTreeMember[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("family_trees")
+}
+
+// Individual family tree member/person
+model FamilyTreeMember {
+  id              String   @id @default(cuid())
+  treeId          String
+  tree            FamilyTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  
+  externalId      String   @db.VarChar(255)
+  name            String   @db.VarChar(255)
+  gender          String   @db.VarChar(10) // 'male' or 'female'
+  
+  birthYear       Int?
+  birthMonth      Int?
+  deathYear       Int?
+  
+  // JSON arrays storing IDs
+  parentIds       Json     @default("[]")    // Array of parent IDs
+  spouseIds       Json     @default("[]")    // Array of spouse IDs
+  childrenIds     Json     @default("[]")    // Array of children IDs
+  
+  relationshipToRoot String? @db.VarChar(100)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([treeId, externalId])
+  @@index([treeId])
+  @@index([gender])
+  @@map("family_tree_members")
+}
+
+// Extend User model to include family trees
+// (Add to User model relation)
+// familyTrees FamilyTree[] @relation("UserFamilyTrees")
