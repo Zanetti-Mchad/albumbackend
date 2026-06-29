@@ -323,6 +323,9 @@ const getCurrentUser = async (req, res) => {
 				phone: true,
 				photo: true,
 				role: true,
+				relationship: true,
+				birthOrder: true,
+				dateOfBirth: true,
 				createdAt: true,
 				updatedAt: true
 			}
@@ -332,7 +335,12 @@ const getCurrentUser = async (req, res) => {
 			return res.status(404).json(formatResponse(404, "User not found"));
 		}
 
-		return res.status(200).json(formatResponse(200, "User profile retrieved successfully", { user }));
+		const profile = {
+			...user,
+			dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split("T")[0] : null
+		};
+
+		return res.status(200).json(formatResponse(200, "User profile retrieved successfully", { user: profile }));
 	} catch (error) {
 		console.error("Error fetching user profile:", error);
 		return res.status(500).json(formatResponse(500, "Internal server error"));
