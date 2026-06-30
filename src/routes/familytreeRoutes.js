@@ -18,10 +18,13 @@ const router = express.Router();
 router.use(authenticate);
 
 // Family Tree CRUD Operations
-router.post("/", submitFamilyTree);                    // Create/update entire family tree
-router.get("/", getFamilyTree);                        // Get user's family tree with all members
+router.post("/", submitFamilyTree);                    // Create new family tree
+router.get("/", getFamilyTree);                        // Get all user's family trees
 router.get("/stats", getFamilyTreeStats);              // Get family tree statistics
-router.delete("/", deleteFamilyTree);                  // Delete entire family tree
+router.get("/:treeId", getFamilyTree);                 // Get specific family tree by ID
+router.put("/:treeId", submitFamilyTree);              // Update specific family tree by ID
+router.delete("/", deleteFamilyTree);                  // Delete all user's family trees
+router.delete("/:treeId", deleteFamilyTree);           // Delete specific family tree by ID
 
 // Family Tree Members CRUD Operations
 router.get("/members", getFamilyTreeMembers);          // Get all members with filtering

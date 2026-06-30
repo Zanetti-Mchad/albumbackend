@@ -11,11 +11,13 @@ const formatResponse = (statusCode, message, data = null) => ({
 
 /**
  * Create or update a complete family tree with all members
- * POST /api/v1/family-tree
+ * POST /api/v1/family-tree (create new)
+ * PUT /api/v1/family-tree/:treeId (update existing)
  */
 const submitFamilyTree = async (req, res) => {
   try {
     const userId = req.user?.id;
+    const { treeId } = req.params;
     const { name, rootId, memberCount, members } = req.body;
 
     if (!userId) {
@@ -30,30 +32,37 @@ const submitFamilyTree = async (req, res) => {
       return res.status(400).json(formatResponse(400, 'Member count does not match members array length'));
     }
 
-    // Create or get existing family tree
-    let familyTree = await prisma.familyTree.findFirst({
-      where: { userId },
-    });
+    let familyTree;
 
-    if (!familyTree) {
-      familyTree = await prisma.familyTree.create({
-        data: {
-          userId,
-          name: name?.trim() || null,
-          rootId,
-        },
+    // If treeId is provided, update the existing tree
+    if (treeId) {
+      familyTree = await prisma.familyTree.findFirst({
+        where: { id: treeId, userId },
       });
-    } else {
-      // Delete existing members for this tree to recreate
+
+      if (!familyTree) {
+        return res.status(404).json(formatResponse(404, 'Family tree not found'));
+      }
+
+      // Delete existing members for this tree
       await prisma.familyTreeMember.deleteMany({
-        where: { treeId: familyTree.id },
+        where: { treeId },
       });
 
       // Update tree
       familyTree = await prisma.familyTree.update({
-        where: { id: familyTree.id },
+        where: { id: treeId },
         data: {
           ...(name !== undefined && { name: name?.trim() || null }),
+          rootId,
+        },
+      });
+    } else {
+      // Otherwise, create a new family tree
+      familyTree = await prisma.familyTree.create({
+        data: {
+          userId,
+          name: name?.trim() || null,
           rootId,
         },
       });
@@ -80,8 +89,8 @@ const submitFamilyTree = async (req, res) => {
       )
     );
 
-    return res.status(201).json(
-      formatResponse(201, 'Family tree saved successfully!', {
+    return res.status(treeId ? 200 : 201).json(
+      formatResponse(treeId ? 200 : 201, treeId ? 'Family tree updated successfully!' : 'Family tree created successfully!', {
         treeId: familyTree.id,
         name: familyTree.name,
         rootId: familyTree.rootId,
@@ -98,41 +107,72 @@ const submitFamilyTree = async (req, res) => {
 };
 
 /**
- * Get user's family tree with all members
- * GET /api/v1/family-tree
+ * Get user's family tree(s)
+ * GET /api/v1/family-tree (get all trees)
+ * GET /api/v1/family-tree/:treeId (get specific tree)
  */
 const getFamilyTree = async (req, res) => {
   try {
     const userId = req.user?.id;
+    const { treeId } = req.params;
 
     if (!userId) {
       return res.status(401).json(formatResponse(401, 'Unauthorized: User not found'));
     }
 
-    const familyTree = await prisma.familyTree.findFirst({
-      where: { userId },
-      include: {
-        members: {
-          orderBy: { createdAt: 'asc' },
+    if (treeId) {
+      // Get specific tree by ID
+      const familyTree = await prisma.familyTree.findFirst({
+        where: { id: treeId, userId },
+        include: {
+          members: {
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
-    });
+      });
 
-    if (!familyTree) {
-      return res.status(404).json(formatResponse(404, 'Family tree not found'));
+      if (!familyTree) {
+        return res.status(404).json(formatResponse(404, 'Family tree not found'));
+      }
+
+      return res.status(200).json(
+        formatResponse(200, 'Family tree retrieved successfully', {
+          treeId: familyTree.id,
+          name: familyTree.name,
+          rootId: familyTree.rootId,
+          memberCount: familyTree.members.length,
+          members: familyTree.members.map(formatMemberForResponse),
+          createdAt: familyTree.createdAt,
+          updatedAt: familyTree.updatedAt,
+        })
+      );
+    } else {
+      // Get all trees for the user
+      const familyTrees = await prisma.familyTree.findMany({
+        where: { userId },
+        include: {
+          members: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return res.status(200).json(
+        formatResponse(200, 'Family trees retrieved successfully', {
+          trees: familyTrees.map(tree => ({
+            treeId: tree.id,
+            name: tree.name,
+            rootId: tree.rootId,
+            memberCount: tree.members.length,
+            members: tree.members.map(formatMemberForResponse),
+            createdAt: tree.createdAt,
+            updatedAt: tree.updatedAt,
+          })),
+          totalTrees: familyTrees.length,
+        })
+      );
     }
-
-    return res.status(200).json(
-      formatResponse(200, 'Family tree retrieved successfully', {
-        treeId: familyTree.id,
-        name: familyTree.name,
-        rootId: familyTree.rootId,
-        memberCount: familyTree.members.length,
-        members: familyTree.members.map(formatMemberForResponse),
-        createdAt: familyTree.createdAt,
-        updatedAt: familyTree.updatedAt,
-      })
-    );
   } catch (error) {
     console.error('Error getting family tree:', error);
     return res.status(500).json(
@@ -272,37 +312,69 @@ const deleteFamilyTreeMember = async (req, res) => {
 };
 
 /**
- * Delete entire family tree
- * DELETE /api/v1/family-tree
+ * Delete family tree(s)
+ * DELETE /api/v1/family-tree (delete all user's trees)
+ * DELETE /api/v1/family-tree/:treeId (delete specific tree)
  */
 const deleteFamilyTree = async (req, res) => {
   try {
     const userId = req.user?.id;
+    const { treeId } = req.params;
 
     if (!userId) {
       return res.status(401).json(formatResponse(401, 'Unauthorized: User not found'));
     }
 
-    const familyTree = await prisma.familyTree.findFirst({
-      where: { userId },
-    });
+    if (treeId) {
+      // Delete specific tree by ID
+      const familyTree = await prisma.familyTree.findFirst({
+        where: { id: treeId, userId },
+      });
 
-    if (!familyTree) {
-      return res.status(404).json(formatResponse(404, 'Family tree not found'));
+      if (!familyTree) {
+        return res.status(404).json(formatResponse(404, 'Family tree not found'));
+      }
+
+      // Delete all members first before deleting the tree
+      await prisma.familyTreeMember.deleteMany({
+        where: { treeId },
+      });
+
+      await prisma.familyTree.delete({
+        where: { id: treeId },
+      });
+
+      return res.status(200).json(
+        formatResponse(200, 'Family tree deleted successfully')
+      );
+    } else {
+      // Delete all trees for the user
+      const familyTrees = await prisma.familyTree.findMany({
+        where: { userId },
+      });
+
+      if (familyTrees.length === 0) {
+        return res.status(404).json(formatResponse(404, 'No family trees found to delete'));
+      }
+
+      // Delete all members first
+      await prisma.familyTreeMember.deleteMany({
+        where: {
+          treeId: {
+            in: familyTrees.map(t => t.id),
+          },
+        },
+      });
+
+      // Delete all trees
+      await prisma.familyTree.deleteMany({
+        where: { userId },
+      });
+
+      return res.status(200).json(
+        formatResponse(200, `${familyTrees.length} family tree(s) deleted successfully`)
+      );
     }
-
-    // Delete all members first before deleting the tree
-    await prisma.familyTreeMember.deleteMany({
-      where: { treeId: familyTree.id },
-    });
-
-    await prisma.familyTree.delete({
-      where: { id: familyTree.id },
-    });
-
-    return res.status(200).json(
-      formatResponse(200, 'Family tree deleted successfully')
-    );
   } catch (error) {
     console.error('Error deleting family tree:', error);
     return res.status(500).json(
