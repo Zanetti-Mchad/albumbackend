@@ -291,6 +291,11 @@ const deleteFamilyTree = async (req, res) => {
       return res.status(404).json(formatResponse(404, 'Family tree not found'));
     }
 
+    // Delete all members first before deleting the tree
+    await prisma.familyTreeMember.deleteMany({
+      where: { treeId: familyTree.id },
+    });
+
     await prisma.familyTree.delete({
       where: { id: familyTree.id },
     });
